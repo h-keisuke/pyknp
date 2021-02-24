@@ -1,11 +1,13 @@
+import asyncio
 import sys
 import os
+from asyncio.subprocess import PIPE
+
 import six
 import re
 import socket
 import platform
 import sys
-from subprocess import PIPE, Popen
 
 
 class Socket(object):
@@ -44,37 +46,24 @@ class Subprocess(object):
         subproc_args = {'cwd': '.', 'close_fds': sys.platform != "win32"}
         try:
             env = os.environ.copy()
-            self.process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=env, **subproc_args)
-            self.process_command = command
-            self.process_timeout = timeout
+            self.process = await asyncio.create_subprocess_exec(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=env, **subproc_args)
             self.encoding = "CP932" if platform.system() == "Windows" else sys.getdefaultencoding()
 
         except OSError:
             raise
 
     def __del__(self):
-        self.process.stdin.close()
-        self.process.stdout.close()
-        try:
-            self.process.kill()
-            self.process.wait()
-        except OSError:
-            pass
-        except TypeError:
-            pass
-        except AttributeError:
-            pass
+        self.process.terminate()
 
     def query(self, sentence, pattern):
         assert(isinstance(sentence, six.text_type))
         sentence = sentence.rstrip() + os.linesep
         self.process.stdin.write(sentence.encode(self.encoding))
-        self.process.stdin.flush()
         result = ''
         while True:
-            line = self.process.stdout.readline().decode(self.encoding).rstrip()
+            line = await self.process.stdout.readline()
+            line = line.decode(self.encoding).rstrip()
             if re.search(pattern, line):
                 break
             result += line + os.linesep
-        self.process.stdout.flush()
         return result
