@@ -52,7 +52,8 @@ class Subprocess(object):
             raise
 
     def __del__(self):
-        self.process.terminate()
+        if self.process is not None:
+            self.process.terminate()
 
     async def get_instance(self):
         if self.process is None:

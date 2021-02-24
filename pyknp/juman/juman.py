@@ -49,7 +49,7 @@ class Juman(object):
         if distutils.spawn.find_executable(self.command) is None:
             raise Exception("Can't find JUMAN command: %s" % self.command)
 
-    async def juman_lines(self, input_str):
+    def juman_lines(self, input_str):
         """ 入力文字列に対して形態素解析を行い、そのJuman出力結果を返す
 
         Args:
