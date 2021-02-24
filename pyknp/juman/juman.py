@@ -3,6 +3,9 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
+
+import asyncio
+
 from pyknp import MList
 from pyknp import JUMAN_FORMAT
 from pyknp import Socket, Subprocess
@@ -46,7 +49,7 @@ class Juman(object):
         if distutils.spawn.find_executable(self.command) is None:
             raise Exception("Can't find JUMAN command: %s" % self.command)
 
-    def juman_lines(self, input_str):
+    async def juman_lines(self, input_str):
         """ 入力文字列に対して形態素解析を行い、そのJuman出力結果を返す
 
         Args:
@@ -68,7 +71,7 @@ class Juman(object):
                 self.subprocess = Subprocess(command)
         if self.socket:
             return self.socket.query(input_str, pattern=self.pattern)
-        return self.subprocess.query(input_str, pattern=self.pattern)
+        return asyncio.run(self.subprocess.query(input_str, pattern=self.pattern))
 
     def juman(self, input_str, juman_format=JUMAN_FORMAT.DEFAULT):
         """ analysis関数と同じ """

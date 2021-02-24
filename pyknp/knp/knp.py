@@ -2,6 +2,9 @@
 
 from __future__ import unicode_literals
 from __future__ import absolute_import
+
+import asyncio
+
 from pyknp import Juman, JUMAN_FORMAT
 from pyknp import Socket, Subprocess  
 from pyknp import BList
@@ -93,7 +96,7 @@ class KNP(object):
         if self.socket:
             knp_lines = self.socket.query(juman_str, pattern=r'^%s$' % self.pattern)
         else:
-            knp_lines = self.subprocess.query(juman_str, pattern=r'^%s$' % self.pattern)
+            knp_lines = asyncio.run(self.subprocess.query(juman_str, pattern=r'^%s$' % self.pattern))
         return BList(knp_lines, self.pattern, juman_format)
 
     def reparse_knp_result(self, knp_str, juman_format=JUMAN_FORMAT.DEFAULT):
