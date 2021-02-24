@@ -43,10 +43,9 @@ class Socket(object):
 class Subprocess(object):
 
     def __init__(self, command, timeout=180):
-        subproc_args = {'cwd': '.', 'close_fds': sys.platform != "win32"}
         try:
-            env = os.environ.copy()
-            self.process = await asyncio.create_subprocess_exec(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=env, **subproc_args)
+            self.process = None
+            self.command = command
             self.encoding = "CP932" if platform.system() == "Windows" else sys.getdefaultencoding()
 
         except OSError:
@@ -55,13 +54,27 @@ class Subprocess(object):
     def __del__(self):
         self.process.terminate()
 
-    def query(self, sentence, pattern):
+    async def get_instance(self):
+        if self.process is None:
+            env = os.environ.copy()
+            subproc_args = {'cwd': '.', 'close_fds': sys.platform != "win32"}
+            self.process = await asyncio.create_subprocess_exec(
+                self.command,
+                stdin=PIPE,
+                stdout=PIPE,
+                stderr=PIPE,
+                env=env,
+                **subproc_args)
+        return self.process
+
+    async def query(self, sentence, pattern):
         assert(isinstance(sentence, six.text_type))
         sentence = sentence.rstrip() + os.linesep
-        self.process.stdin.write(sentence.encode(self.encoding))
+        subprocess = await self.get_instance()
+        subprocess.stdin.write(sentence.encode(self.encoding))
         result = ''
         while True:
-            line = await self.process.stdout.readline()
+            line = await subprocess.stdout.readline()
             line = line.decode(self.encoding).rstrip()
             if re.search(pattern, line):
                 break
