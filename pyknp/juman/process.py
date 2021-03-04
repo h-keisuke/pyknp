@@ -68,6 +68,7 @@ class Subprocess(object):
     def query(self, sentence, pattern):
         assert(isinstance(sentence, six.text_type))
         sentence = sentence.rstrip() + os.linesep
+        self.process.stdout.flush()
         self.process.stdin.write(sentence.encode(self.encoding))
         self.process.stdin.flush()
         result = ''
