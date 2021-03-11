@@ -41,12 +41,12 @@ class Socket(object):
 class Subprocess(object):
 
     def __init__(self, command, timeout=180):
-        subproc_args = {'cwd': '.', 'close_fds': sys.platform != "win32"}
+        self.subproc_args = {'cwd': '.', 'close_fds': sys.platform != "win32"}
         try:
-            env = os.environ.copy()
-            self.process = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=env, **subproc_args)
+            self.env = os.environ.copy()
             self.process_command = command
             self.process_timeout = timeout
+            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
             self.encoding = "CP932" if platform.system() == "Windows" else sys.getdefaultencoding()
 
         except OSError:
@@ -64,6 +64,10 @@ class Subprocess(object):
             pass
         except AttributeError:
             pass
+
+    def reopen(self):
+        self.process.kill()
+        self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
 
     def query(self, sentence, pattern):
         assert(isinstance(sentence, six.text_type))
