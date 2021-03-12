@@ -66,7 +66,12 @@ class Subprocess(object):
             pass
 
     def reopen(self):
-        self.process.kill()
+        if self.process:
+            self.process.stdin.close()
+            self.process.stdout.close()
+            self.process.stderr.close()
+            self.process.kill()
+            self.process.wait(timeout=60)
         self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
 
     def query(self, sentence, pattern):
