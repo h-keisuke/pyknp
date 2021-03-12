@@ -55,35 +55,40 @@ class Subprocess(object):
             raise
 
     def __del__(self):
-        self.process.stdin.close()
-        self.process.stdout.close()
-        try:
-            self.process.kill()
-            self.process.wait()
-        except OSError:
-            pass
-        except TypeError:
-            pass
-        except AttributeError:
-            pass
+        self.kill()
 
-    def reopen(self):
-        if self.process:
-            pid = self.process.pid
-            try:
-                os.kill(pid, signal.CTRL_C_EVENT)
-                time.sleep(60)
+    def kill(self):
+        if platform.system() == "Windows":
+            if self.process:
+                pid = self.process.pid
                 try:
-                    os.kill(pid, 0)
+                    os.kill(pid, signal.CTRL_C_EVENT)
+                    time.sleep(60)
+                    try:
+                        os.kill(pid, 0)
+                    except OSError:
+                        # pid is unassigned
+                        pass
+                    else:
+                        os.kill(pid, signal.CTRL_BREAK_EVENT)
                 except OSError:
                     # pid is unassigned
                     pass
-                else:
-                    os.kill(pid, signal.CTRL_BREAK_EVENT)
+        else:
+            self.process.stdin.close()
+            self.process.stdout.close()
+            try:
+                self.process.kill()
+                self.process.wait()
             except OSError:
-                # pid is unassigned
+                pass
+            except TypeError:
+                pass
+            except AttributeError:
                 pass
 
+    def reopen(self):
+        self.kill()
         self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
 
     def query(self, sentence, pattern):
