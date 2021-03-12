@@ -7,7 +7,7 @@ import re
 import socket
 import platform
 import sys
-from subprocess import PIPE, Popen
+from subprocess import PIPE, Popen, HIGH_PRIORITY_CLASS
 
 
 class Socket(object):
@@ -48,7 +48,10 @@ class Subprocess(object):
             self.env = os.environ.copy()
             self.process_command = command
             self.process_timeout = timeout
-            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+            if platform.system() == "Windows":
+                self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+            else:
+                self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=HIGH_PRIORITY_CLASS, **self.subproc_args)
             self.encoding = "CP932" if platform.system() == "Windows" else sys.getdefaultencoding()
 
         except OSError:
@@ -89,7 +92,10 @@ class Subprocess(object):
 
     def reopen(self):
         self.kill()
-        self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+        if platform.system() == "Windows":
+            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+        else:
+            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=HIGH_PRIORITY_CLASS, **self.subproc_args)
 
     def query(self, sentence, pattern):
         assert(isinstance(sentence, six.text_type))
