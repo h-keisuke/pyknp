@@ -1,5 +1,7 @@
-import sys
+import signal
 import os
+import time
+
 import six
 import re
 import socket
@@ -67,11 +69,21 @@ class Subprocess(object):
 
     def reopen(self):
         if self.process:
-            self.process.stdin.close()
-            self.process.stdout.close()
-            self.process.stderr.close()
-            self.process.kill()
-            self.process.wait(timeout=60)
+            pid = self.process.pid
+            try:
+                os.kill(pid, signal.CTRL_C_EVENT)
+                time.sleep(60)
+                try:
+                    os.kill(pid, 0)
+                except OSError:
+                    # pid is unassigned
+                    pass
+                else:
+                    os.kill(pid, signal.CTRL_BREAK_EVENT)
+            except OSError:
+                # pid is unassigned
+                pass
+
         self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
 
     def query(self, sentence, pattern):
