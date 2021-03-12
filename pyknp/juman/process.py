@@ -7,7 +7,8 @@ import re
 import socket
 import platform
 import sys
-from subprocess import PIPE, Popen, HIGH_PRIORITY_CLASS
+from subprocess import PIPE, Popen
+import subprocess
 
 
 class Socket(object):
@@ -49,7 +50,7 @@ class Subprocess(object):
             self.process_command = command
             self.process_timeout = timeout
             if platform.system() == "Windows":
-                self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=HIGH_PRIORITY_CLASS, **self.subproc_args)
+                self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=subprocess.HIGH_PRIORITY_CLASS, **self.subproc_args)
             else:
                 self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
             self.encoding = "CP932" if platform.system() == "Windows" else sys.getdefaultencoding()
@@ -93,7 +94,7 @@ class Subprocess(object):
     def reopen(self):
         self.kill()
         if platform.system() == "Windows":
-            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=HIGH_PRIORITY_CLASS, **self.subproc_args)
+            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=subprocess.HIGH_PRIORITY_CLASS, **self.subproc_args)
         else:
             self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
 
