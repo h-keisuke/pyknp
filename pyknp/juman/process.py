@@ -105,7 +105,7 @@ class Subprocess(object):
         assert(isinstance(sentence, six.text_type))
         sentence = sentence.rstrip() + os.linesep
         self.process.stdout.flush()
-        self.process.stdin.write(sentence.encode(self.encoding))
+        self.process.stdin.write(sentence.encode(self.encoding, 'replace'))
         self.process.stdin.flush()
         result = ''
         while True:
