@@ -74,7 +74,10 @@ class Subprocess(object):
                         # pid is unassigned
                         pass
                     else:
-                        os.kill(pid, signal.CTRL_BREAK_EVENT)
+                        try:
+                            os.kill(pid, signal.CTRL_BREAK_EVENT)
+                        except:
+                            pass
                 except OSError:
                     # pid is unassigned
                     pass
