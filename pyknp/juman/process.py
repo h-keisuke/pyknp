@@ -1,14 +1,14 @@
+import asyncio
 import signal
 import os
 import time
+from asyncio.subprocess import PIPE
 
 import six
 import re
 import socket
 import platform
 import sys
-from subprocess import PIPE, Popen
-import subprocess
 
 
 class Socket(object):
@@ -49,10 +49,11 @@ class Subprocess(object):
             self.env = os.environ.copy()
             self.process_command = command
             self.process_timeout = timeout
-            if platform.system() == "Windows":
-                self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=subprocess.HIGH_PRIORITY_CLASS, **self.subproc_args)
-            else:
-                self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+            # if platform.system() == "Windows":
+            #     self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=subprocess.HIGH_PRIORITY_CLASS, **self.subproc_args)
+            # else:
+            #     self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+            self.process = asyncio.run(asyncio.create_subprocess_exec(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args))
             self.encoding = "CP932" if platform.system() == "Windows" else sys.getdefaultencoding()
 
         except OSError:
@@ -62,56 +63,62 @@ class Subprocess(object):
         self.kill()
 
     def kill(self):
-        if platform.system() == "Windows":
-            if self.process:
-                pid = self.process.pid
-                try:
-                    os.kill(pid, signal.CTRL_C_EVENT)
-                    time.sleep(60)
-                    try:
-                        os.kill(pid, 0)
-                    except OSError:
-                        # pid is unassigned
-                        pass
-                    else:
-                        try:
-                            os.kill(pid, signal.CTRL_BREAK_EVENT)
-                        except:
-                            pass
-                except OSError:
-                    # pid is unassigned
-                    pass
-        else:
-            self.process.stdin.close()
-            self.process.stdout.close()
-            try:
-                self.process.kill()
-                self.process.wait()
-            except OSError:
-                pass
-            except TypeError:
-                pass
-            except AttributeError:
-                pass
+        asyncio.run(self.process.kill())
+        # if platform.system() == "Windows":
+        #     if self.process:
+        #         pid = self.process.pid
+        #         try:
+        #             os.kill(pid, signal.CTRL_C_EVENT)
+        #             time.sleep(60)
+        #             try:
+        #                 os.kill(pid, 0)
+        #             except OSError:
+        #                 # pid is unassigned
+        #                 pass
+        #             else:
+        #                 try:
+        #                     os.kill(pid, signal.CTRL_BREAK_EVENT)
+        #                 except:
+        #                     pass
+        #         except OSError:
+        #             # pid is unassigned
+        #             pass
+        # else:
+        #     self.process.stdin.close()
+        #     self.process.stdout.close()
+        #     try:
+        #         self.process.kill()
+        #         self.process.wait()
+        #     except OSError:
+        #         pass
+        #     except TypeError:
+        #         pass
+        #     except AttributeError:
+        #         pass
 
     def reopen(self):
         self.kill()
-        if platform.system() == "Windows":
-            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=subprocess.HIGH_PRIORITY_CLASS, **self.subproc_args)
-        else:
-            self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+        # if platform.system() == "Windows":
+        #     self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, creationflags=subprocess.HIGH_PRIORITY_CLASS, **self.subproc_args)
+        # else:
+        #     self.process = Popen(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args)
+        self.process = asyncio.run(asyncio.create_subprocess_exec(self.process_command, stdin=PIPE, stdout=PIPE, stderr=PIPE, env=self.env, **self.subproc_args))
+
+    async def _query(self, sentence, pattern):
+        sentence = sentence.rstrip() + os.linesep
+        # self.process.stdout.flush()
+        asyncio.run(self.process.stdin.write(sentence.encode(self.encoding, 'replace')))
+        # self.process.stdin.flush()
+        result = ''
+        while True:
+            # line = self.process.stdout.readline().decode(self.encoding).rstrip()
+            line = await self.process.stdout.readline()
+            decoded_line = line.decode(self.encoding).rstrip()
+            if re.search(pattern, decoded_line):
+                break
+            result += decoded_line + os.linesep
+        return result
 
     def query(self, sentence, pattern):
         assert(isinstance(sentence, six.text_type))
-        sentence = sentence.rstrip() + os.linesep
-        self.process.stdout.flush()
-        self.process.stdin.write(sentence.encode(self.encoding, 'replace'))
-        self.process.stdin.flush()
-        result = ''
-        while True:
-            line = self.process.stdout.readline().decode(self.encoding).rstrip()
-            if re.search(pattern, line):
-                break
-            result += line + os.linesep
-        self.process.stdout.flush()
-        return result
+        return asyncio.wait_for(self._query(sentence, pattern), timeout=60)
